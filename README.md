@@ -10,3 +10,6 @@ The construct defines an interface (`TemplateProps`) to configure the visibility
 * `npm run build`   compile typescript to js
 * `npm run watch`   watch for changes and compile
 * `npm run test`    perform the jest unit tests
+
+## Useful links 
+* [AWS CDK typescript github](https://github.com/aws/aws-cdk/tree/main/packages/aws-cdk-lib)
