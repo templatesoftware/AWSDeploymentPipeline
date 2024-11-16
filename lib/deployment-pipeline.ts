@@ -11,13 +11,13 @@ import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 
 export interface DeploymentPipelineProps extends StackProps {
-    // pipeline name
+    /** pipeline name */
     readonly pipelineName: string;
 
-    // the CDK repository responsible for managing this pipeline
+    /** the CDK repository responsible for managing this pipeline */
     readonly cdkSourceRepository: AutoBuildRepository
 
-    // repositories to auto build
+    /** repositories to auto build */
     readonly additionalAutoBuildRepositories: AutoBuildRepository[];
 }
 

@@ -11,7 +11,7 @@ export interface DeploymentStageProps extends StackProps {
  * to the beta stage
  */
 export class DeploymentStage extends Construct {
-    // stacks to deploy as part of the stage
+    /** stacks to deploy as part of the stage */
     stages: Stack[];
 
     public constructor(scope: Construct, id: string, props: DeploymentStageProps) {

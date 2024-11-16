@@ -3,19 +3,19 @@ import {Artifact} from 'aws-cdk-lib/aws-codepipeline';
 import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 
 export interface AutoBuildRepositoryProps {
-    // connection ARN
+    /** connection ARN */
     readonly connectionArn: string;
 
-    // owner
+    /** owner */
     readonly owner: string;
 
-    // repo name
+    /** repo name */
     readonly repo: string;
 
-    // branch
+    /** branch */
     readonly branch?: string;
 
-    // whether this repository controls this pipeline
+    /** whether this repository controls this pipeline */
     readonly isCDKSourceRepository?: boolean;
 }
 
