@@ -1,7 +1,11 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, IStage, Pipeline, PipelineType} from "aws-cdk-lib/aws-codepipeline";
-import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
+import {
+    CloudFormationCreateUpdateStackAction,
+    CodeBuildAction,
+    S3DeployAction
+} from "aws-cdk-lib/aws-codepipeline-actions";
 import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {PipelineStage} from "./deployment-stack";
@@ -9,6 +13,7 @@ import {DeploymentStage} from "./deployment-stage";
 import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
+import {Bucket} from "aws-cdk-lib/aws-s3";
 
 export interface DeploymentPipelineProps extends StackProps {
     /** pipeline name */
@@ -25,6 +30,7 @@ export class DeploymentPipeline extends Stack {
     readonly pipeline: Pipeline;
     readonly cloudAssemblyOutput: Artifact;
     readonly cdkSourceRepository: AutoBuildRepository;
+    readonly repositoryToBuildArtifact: Map<AutoBuildRepository, Artifact>;
 
     constructor(scope: Construct, id: string, props: DeploymentPipelineProps) {
         super(scope, id, props);
@@ -38,12 +44,11 @@ export class DeploymentPipeline extends Stack {
             stageName: 'Source'
         });
 
-        const repositoryToBuildArtifact = new Map<AutoBuildRepository, Artifact>();
-        const autoBuildSourceActions: IAction[] = [this.cdkSourceRepository]
-            .concat(props.additionalAutoBuildRepositories)
+        this.repositoryToBuildArtifact = new Map<AutoBuildRepository, Artifact>();
+        const autoBuildSourceActions: IAction[] = this.getAllRepositoriesToBuild(props)
             .map(autoBuildRepo => {
                 const autoBuiltRepoArtifact = new Artifact(autoBuildRepo.repo)
-                repositoryToBuildArtifact.set(autoBuildRepo, autoBuiltRepoArtifact)
+                this.repositoryToBuildArtifact.set(autoBuildRepo, autoBuiltRepoArtifact)
                 return autoBuildRepo.createSourceAction(
                     autoBuiltRepoArtifact
                 )
@@ -97,7 +102,7 @@ export class DeploymentPipeline extends Stack {
             actions: ['ssm:GetParameter*'],
             resources: ['*'],
         }));
-        const cdkSourceCodeArtifact = repositoryToBuildArtifact.get(this.cdkSourceRepository)!
+        const cdkSourceCodeArtifact = this.repositoryToBuildArtifact.get(this.cdkSourceRepository)!
         this.cloudAssemblyOutput = new Artifact();
         this.pipeline.addStage({
             stageName: 'CDKSynthesis',
@@ -121,6 +126,22 @@ export class DeploymentPipeline extends Stack {
                 }),
             ]
         })
+        const codeReplicationBucket = new Bucket(this, `${props.pipelineName}-code-replication-bucket`)
+        this.pipeline.addStage({
+            stageName: 'CodeReplication',
+            actions: this.getAllRepositoriesToBuild(props)
+                .map(autoBuildRepo => {
+                    return new S3DeployAction(
+                        {
+                            actionName: `${autoBuildRepo.repo}-replication`,
+                            // can reference the variables
+                            objectKey: `${autoBuildRepo.repo}-replication/`,
+                            input: this.repositoryToBuildArtifact.get(autoBuildRepo)!,
+                            bucket: codeReplicationBucket
+                        }
+                    )
+                })
+        })
     }
 
     /**
@@ -143,5 +164,22 @@ export class DeploymentPipeline extends Stack {
             stageName: stageName,
             actions: actions
         });
+    }
+
+    /**
+     * Given an input repository return its build artifacts
+     * @param autoBuildRepository
+     */
+    public getBuildArtifact(autoBuildRepository: AutoBuildRepository): Artifact {
+        return this.repositoryToBuildArtifact.get(autoBuildRepository)!;
+    }
+
+    /**
+     * Get all repos to auto build, including the cdk source repo
+     * @param props pipeline props
+     */
+    getAllRepositoriesToBuild(props: DeploymentPipelineProps) {
+        return [this.cdkSourceRepository]
+            .concat(props.additionalAutoBuildRepositories);
     }
 }
