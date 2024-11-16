@@ -1,5 +1,4 @@
-import {DeploymentStage} from "../lib/deployment-stage";
-import {BETA_STAGE, DEV_STAGE, GAMMA_STAGE, PROD_STAGE} from "../lib/deployment-stack";
+import {BETA_STAGE, DeploymentStack, DEV_STAGE, GAMMA_STAGE, PROD_STAGE, Stage} from "../lib/deployment-stack";
 import {App, Stack} from "aws-cdk-lib";
 
 

@@ -1,6 +1,5 @@
 import {CodeStarConnectionsSourceAction} from "aws-cdk-lib/aws-codepipeline-actions";
-// import {Artifact} from "aws-cdk-lib/aws-codepipeline/lib/artifact";
-import { Artifact } from 'aws-cdk-lib/aws-codepipeline';
+import {Artifact} from 'aws-cdk-lib/aws-codepipeline';
 import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 
 export interface AutoBuildRepositoryProps {
