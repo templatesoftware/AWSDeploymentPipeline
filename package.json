@@ -1,12 +1,12 @@
 {
   "name": "aws-deployment-pipeline",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "preversion": "npm test",
-    "version": "npm run build && git add -A dist",
-    "postversion": "git push && git push --tags && rm -rf build/temp",
+    "version": "npm run build && git add -A",
+    "postversion": "git push && git push --tags",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest"
