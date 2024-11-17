@@ -1,12 +1,14 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, IStage, Pipeline, PipelineType} from "aws-cdk-lib/aws-codepipeline";
+import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 import {
-    CloudFormationCreateUpdateStackAction,
-    CodeBuildAction,
-    S3DeployAction
-} from "aws-cdk-lib/aws-codepipeline-actions";
-import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+    BuildEnvironmentVariable,
+    BuildSpec,
+    IProject,
+    LinuxBuildImage,
+    PipelineProject
+} from "aws-cdk-lib/aws-codebuild";
 import {PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {PipelineStage} from "./deployment-stack";
 import {DeploymentStage} from "./deployment-stage";
@@ -14,6 +16,8 @@ import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 import {Bucket} from "aws-cdk-lib/aws-s3";
+import {CodeBuildActionType} from "aws-cdk-lib/aws-codepipeline-actions/lib/codebuild/build-action";
+import {v4 as uuidv4} from 'uuid';
 
 export interface DeploymentPipelineProps extends StackProps {
     /** pipeline name */
@@ -93,15 +97,13 @@ export class DeploymentPipeline extends Stack {
                 },
             }),
         });
-        // allow self mutation
-        pipelineMutationAction.addToRolePolicy(new PolicyStatement({
-            actions: ['sts:AssumeRole'],
-            resources: ['*'],
-        }));
-        pipelineMutationAction.addToRolePolicy(new PolicyStatement({
-            actions: ['ssm:GetParameter*'],
-            resources: ['*'],
-        }));
+        // allow the pipeline to self mutate self mutation
+        pipelineMutationAction.addToRolePolicy(
+            new PolicyStatement({
+                actions: ['sts:AssumeRole', 'ssm:GetParameter*'],
+                resources: ['*'],
+            })
+        );
         const cdkSourceCodeArtifact = this.repositoryToBuildArtifact.get(this.cdkSourceRepository)!
         this.cloudAssemblyOutput = new Artifact();
         this.pipeline.addStage({
@@ -112,8 +114,8 @@ export class DeploymentPipeline extends Stack {
                     project: synthAction,
                     input: cdkSourceCodeArtifact,
                     outputs: [this.cloudAssemblyOutput],
+                    type: CodeBuildActionType.BUILD,
                 }),
-
             ]
         })
         this.pipeline.addStage({
@@ -123,24 +125,40 @@ export class DeploymentPipeline extends Stack {
                     actionName: 'SelfMutate',
                     project: pipelineMutationAction,
                     input: this.cloudAssemblyOutput,
+                    type: CodeBuildActionType.BUILD,
                 }),
             ]
         })
+
         const codeReplicationBucket = new Bucket(this, `${props.pipelineName}-code-replication-bucket`)
+        // get a uuid for the artifact upload to avoid collisions
+        const uuid: string = uuidv4().substring(0, 6);
+        const pathPrefix = `${new Date()}-${uuid}/`
+        const codeBuildProject: IProject = this.getCodeBuildReplicationProject(
+            props.additionalAutoBuildRepositories[0]!,
+            pathPrefix,
+            codeReplicationBucket
+        );
+        const replicationActions: CodeBuildAction[] = props.additionalAutoBuildRepositories.map(
+            autoBuildRepository => {
+                return new CodeBuildAction(
+                    {
+                        actionName: `${autoBuildRepository.repo}-Replication`,
+                        project: this.getCodeBuildReplicationProject(
+                            autoBuildRepository,
+                            pathPrefix,
+                            codeReplicationBucket
+                        ),
+                        input: this.getBuildArtifact(autoBuildRepository)
+                    }
+                )
+            }
+        )
+
+        // for each additional source repository, zip it up and upload it to S3 or EMR for later distribution
         this.pipeline.addStage({
             stageName: 'CodeReplication',
-            actions: this.getAllRepositoriesToBuild(props)
-                .map(autoBuildRepo => {
-                    return new S3DeployAction(
-                        {
-                            actionName: `${autoBuildRepo.repo}-replication`,
-                            // can reference the variables
-                            objectKey: `${autoBuildRepo.repo}-replication/`,
-                            input: this.repositoryToBuildArtifact.get(autoBuildRepo)!,
-                            bucket: codeReplicationBucket
-                        }
-                    )
-                })
+            actions: replicationActions
         })
     }
 
@@ -167,18 +185,61 @@ export class DeploymentPipeline extends Stack {
     }
 
     /**
+     * Creates a build project that builds a pipeline's input repository and uploads it into S3 for later distribution
+     * @param autoBuildRepository source repository to replicate
+     * @param pathPrefix prefix to use within s3Bucket
+     * @param bucket bucket to upload replicated code to
+     * @private build project to zip and upload a source repository
+     */
+    private getCodeBuildReplicationProject(
+        autoBuildRepository: AutoBuildRepository,
+        pathPrefix: string,
+        bucket: Bucket): IProject {
+        const zipArchiveName = `${autoBuildRepository.repo}.zip`
+        const buildEnvironmentVariables: { [key: string]: BuildEnvironmentVariable } = {
+            ARTIFACT_NAME: {value: zipArchiveName},
+            S3_OBJECT_PATH: {value: pathPrefix},
+            BUCKET_NAME: {value: bucket.bucketName}, // Pass bucket name as a variable
+        };
+        return new PipelineProject(this, 'BuildProject', {
+            buildSpec: BuildSpec.fromObject({
+                version: '0.2',
+                phases: {
+                    install: {
+                        commands: ['npm install -g zip'],
+                    },
+                    build: {
+                        commands: [
+                            'ls -ltr',
+                            'echo "ARTIFACT_NAME: $ARTIFACT_NAME',
+                            'echo "S3_OBJECT_PATH: $S3_OBJECT_PATH',
+                            'echo "BUCKET_NAME: $BUCKET_NAME"',
+                            'zip -r $ARTIFACT_NAME .',
+                            'aws s3 cp $ARTIFACT_NAME s3://$BUCKET_NAME/$S3_OBJECT_PATH/$ARTIFACT_NAME',
+                        ],
+                    },
+                },
+                environment: {
+                    environmentVariables: buildEnvironmentVariables,
+                },
+            })
+        });
+    }
+
+    /**
      * Given an input repository return its build artifacts
      * @param autoBuildRepository
      */
-    public getBuildArtifact(autoBuildRepository: AutoBuildRepository): Artifact {
+    private getBuildArtifact(autoBuildRepository: AutoBuildRepository): Artifact {
         return this.repositoryToBuildArtifact.get(autoBuildRepository)!;
     }
+
 
     /**
      * Get all repos to auto build, including the cdk source repo
      * @param props pipeline props
      */
-    getAllRepositoriesToBuild(props: DeploymentPipelineProps) {
+    private getAllRepositoriesToBuild(props: DeploymentPipelineProps) {
         return [this.cdkSourceRepository]
             .concat(props.additionalAutoBuildRepositories);
     }
