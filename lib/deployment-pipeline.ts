@@ -134,12 +134,7 @@ export class DeploymentPipeline extends Stack {
         // get a uuid for the artifact upload to avoid collisions
         const uuid: string = uuidv4().substring(0, 6);
         const pathPrefix = `${new Date()}-${uuid}/`
-        const codeBuildProject: IProject = this.getCodeBuildReplicationProject(
-            props.additionalAutoBuildRepositories[0]!,
-            pathPrefix,
-            codeReplicationBucket
-        );
-        const replicationActions: CodeBuildAction[] = props.additionalAutoBuildRepositories.map(
+        const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
                 return new CodeBuildAction(
                     {
@@ -201,7 +196,7 @@ export class DeploymentPipeline extends Stack {
             S3_OBJECT_PATH: {value: pathPrefix},
             BUCKET_NAME: {value: bucket.bucketName}, // Pass bucket name as a variable
         };
-        return new PipelineProject(this, 'BuildProject', {
+        return new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
             buildSpec: BuildSpec.fromObject({
                 version: '0.2',
                 phases: {
