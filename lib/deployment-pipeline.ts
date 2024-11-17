@@ -2,13 +2,7 @@ import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, IStage, Pipeline, PipelineType} from "aws-cdk-lib/aws-codepipeline";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
-import {
-    BuildEnvironmentVariable,
-    BuildSpec,
-    IProject,
-    LinuxBuildImage,
-    PipelineProject
-} from "aws-cdk-lib/aws-codebuild";
+import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {PipelineStage} from "./deployment-stack";
 import {DeploymentStage} from "./deployment-stage";
@@ -186,7 +180,7 @@ export class DeploymentPipeline extends Stack {
     private getCodeBuildReplicationProject(
         autoBuildRepository: AutoBuildRepository,
         pathPrefix: string,
-        bucket: Bucket): IProject {
+        bucket: Bucket): PipelineProject {
         const zipArchiveName = `${autoBuildRepository.repo}.zip`
         const buildEnvironmentVariables: { [key: string]: BuildEnvironmentVariable } = {
             ARTIFACT_NAME: {value: zipArchiveName},
