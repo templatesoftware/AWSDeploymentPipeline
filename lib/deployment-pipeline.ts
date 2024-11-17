@@ -9,7 +9,7 @@ import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
-import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 
 export interface DeploymentPipelineProps extends StackProps {
