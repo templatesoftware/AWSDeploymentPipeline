@@ -1,8 +1,6 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {Artifact, IStage, Pipeline, PipelineType} from "aws-cdk-lib/aws-codepipeline";
-import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
-import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {PipelineStage} from "./deployment-stack";
 import {DeploymentStage} from "./deployment-stage";
@@ -11,6 +9,8 @@ import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
+import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 
 export interface DeploymentPipelineProps extends StackProps {
     /** pipeline name */
@@ -182,11 +182,6 @@ export class DeploymentPipeline extends Stack {
         pathPrefix: string,
         bucket: Bucket): PipelineProject {
         const zipArchiveName = `${autoBuildRepository.repo}.zip`
-        const buildEnvironmentVariables: { [key: string]: BuildEnvironmentVariable } = {
-            ARTIFACT_NAME: {value: zipArchiveName},
-            S3_OBJECT_PATH: {value: pathPrefix},
-            BUCKET_NAME: {value: bucket.bucketName}, // Pass bucket name as a variable
-        };
         return new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
             buildSpec: BuildSpec.fromObject({
                 version: '0.2',
@@ -206,7 +201,20 @@ export class DeploymentPipeline extends Stack {
                     },
                 },
                 environment: {
-                    environmentVariables: buildEnvironmentVariables,
+                    environmentVariables: [
+                        {
+                            "name": "ARTIFACT_NAME",
+                            value: zipArchiveName
+                        },
+                        {
+                            "name": "S3_OBJECT_PATH",
+                            value: pathPrefix
+                        },
+                        {
+                            "name": "BUCKET_NAME",
+                            value: bucket.bucketName
+                        },
+                    ],
                 },
             })
         });
