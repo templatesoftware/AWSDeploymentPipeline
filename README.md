@@ -10,3 +10,4 @@
 
 ## Useful links 
 * [AWS CDK typescript github](https://github.com/aws/aws-cdk/tree/main/packages/aws-cdk-lib)
+* [NPM registry](https://www.npmjs.com/package/aws-deployment-pipeline)
