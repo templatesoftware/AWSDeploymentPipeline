@@ -1,9 +1,9 @@
 import {AutoBuildRepository} from "../lib/auto-build-repository";
-import {CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 import {App, Stack} from "aws-cdk-lib";
 import {Artifact, Pipeline} from 'aws-cdk-lib/aws-codepipeline';
 import {PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {Template} from "aws-cdk-lib/assertions";
+import {CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 
 describe('Auto build repository', () => {
     test('Auto build repository creates action correctly', () => {
