@@ -16,7 +16,6 @@ import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 import {Bucket} from "aws-cdk-lib/aws-s3";
-import {CodeBuildActionType} from "aws-cdk-lib/aws-codepipeline-actions/lib/codebuild/build-action";
 import {v4 as uuidv4} from 'uuid';
 
 export interface DeploymentPipelineProps extends StackProps {
@@ -114,7 +113,6 @@ export class DeploymentPipeline extends Stack {
                     project: synthAction,
                     input: cdkSourceCodeArtifact,
                     outputs: [this.cloudAssemblyOutput],
-                    type: CodeBuildActionType.BUILD,
                 }),
             ]
         })
@@ -125,7 +123,6 @@ export class DeploymentPipeline extends Stack {
                     actionName: 'Self-Mutate',
                     project: pipelineMutationAction,
                     input: this.cloudAssemblyOutput,
-                    type: CodeBuildActionType.BUILD,
                 }),
             ]
         })
