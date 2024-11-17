@@ -92,7 +92,7 @@ export class DeploymentPipeline extends Stack {
                         commands: ['npm ci'],
                     },
                     build: {
-                        commands: [`npx cdk deploy ${this.stackName} --require-approval=never`, `echo new commands`,]
+                        commands: [`npx cdk deploy ${this.stackName} --require-approval=never`]
                     }
                 },
             }),
@@ -107,10 +107,10 @@ export class DeploymentPipeline extends Stack {
         const cdkSourceCodeArtifact = this.repositoryToBuildArtifact.get(this.cdkSourceRepository)!
         this.cloudAssemblyOutput = new Artifact();
         this.pipeline.addStage({
-            stageName: 'CDKSynthesis',
+            stageName: 'Synthesis',
             actions: [
                 new CodeBuildAction({
-                    actionName: 'CDKSynth',
+                    actionName: 'CDK-Synthesis',
                     project: synthAction,
                     input: cdkSourceCodeArtifact,
                     outputs: [this.cloudAssemblyOutput],
@@ -122,7 +122,7 @@ export class DeploymentPipeline extends Stack {
             stageName: 'Pipeline',
             actions: [
                 new CodeBuildAction({
-                    actionName: 'SelfMutate',
+                    actionName: 'Self-Mutate',
                     project: pipelineMutationAction,
                     input: this.cloudAssemblyOutput,
                     type: CodeBuildActionType.BUILD,
@@ -150,9 +150,9 @@ export class DeploymentPipeline extends Stack {
             }
         )
 
-        // for each additional source repository, zip it up and upload it to S3 or EMR for later distribution
+        // for each source repository, zip it up and upload it to S3 or EMR for later distribution
         this.pipeline.addStage({
-            stageName: 'CodeReplication',
+            stageName: 'Code-Replication',
             actions: replicationActions
         })
     }

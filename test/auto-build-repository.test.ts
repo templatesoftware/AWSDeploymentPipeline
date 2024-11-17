@@ -46,7 +46,7 @@ describe('Auto build repository', () => {
                     'Name': 'Source',
                     'Actions': [
                         {
-                            'Name': 'TestRepo-Source',
+                            'Name': 'TestRepo',
                             'ActionTypeId': {
                                 'Owner': 'AWS',
                                 'Provider': 'CodeStarSourceConnection',

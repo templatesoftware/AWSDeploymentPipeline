@@ -39,7 +39,7 @@ export class AutoBuildRepository {
     public createSourceAction(artifact: Artifact): IAction {
         return new CodeStarConnectionsSourceAction(
             {
-                actionName: `${this.repo}-Source`,
+                actionName: `${this.repo}`,
                 connectionArn: this.connectionArn,
                 repo: this.repo,
                 output: artifact,
