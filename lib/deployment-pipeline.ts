@@ -124,7 +124,8 @@ export class DeploymentPipeline extends Stack {
         const codeReplicationBucket = new Bucket(this, `${props.pipelineName}-code-replication-bucket`)
         // get a uuid for the artifact upload to avoid collisions
         const uuid: string = uuidv4().substring(0, 6);
-        const pathPrefix = `${new Date()}-${uuid}/`
+        const date = new Date()
+        const pathPrefix = `${date.toDateString()}-${uuid}/`
         const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
                 return new CodeBuildAction(
@@ -192,9 +193,9 @@ export class DeploymentPipeline extends Stack {
                     build: {
                         commands: [
                             'ls -ltr',
-                            'echo "ARTIFACT_NAME: $ARTIFACT_NAME"',
-                            'echo "S3_OBJECT_PATH: $S3_OBJECT_PATH"',
-                            'echo "BUCKET_NAME: $BUCKET_NAME"',
+                            'echo ARTIFACT_NAME: $ARTIFACT_NAME',
+                            'echo S3_OBJECT_PATH: $S3_OBJECT_PATH',
+                            'echo BUCKET_NAME: $BUCKET_NAME',
                             'zip -r $ARTIFACT_NAME .',
                             'aws s3 cp $ARTIFACT_NAME s3://$BUCKET_NAME/$S3_OBJECT_PATH/$ARTIFACT_NAME',
                         ],
@@ -202,9 +203,9 @@ export class DeploymentPipeline extends Stack {
                 },
                 environment: {
                     environmentVariables: {
-                        ARTIFACT_NAME: zipArchiveName,
-                        S3_OBJECT_PATH: pathPrefix,
-                        BUCKET_NAME: bucket.bucketName,
+                        "ARTIFACT_NAME": zipArchiveName,
+                        "S3_OBJECT_PATH": pathPrefix,
+                        "BUCKET_NAME": bucket.bucketName,
                     },
                 },
             })
