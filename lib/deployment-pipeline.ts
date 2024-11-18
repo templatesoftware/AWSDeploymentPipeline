@@ -192,8 +192,8 @@ export class DeploymentPipeline extends Stack {
                     build: {
                         commands: [
                             'ls -ltr',
-                            'echo "ARTIFACT_NAME: $ARTIFACT_NAME',
-                            'echo "S3_OBJECT_PATH: $S3_OBJECT_PATH',
+                            'echo "ARTIFACT_NAME: $ARTIFACT_NAME"',
+                            'echo "S3_OBJECT_PATH: $S3_OBJECT_PATH"',
                             'echo "BUCKET_NAME: $BUCKET_NAME"',
                             'zip -r $ARTIFACT_NAME .',
                             'aws s3 cp $ARTIFACT_NAME s3://$BUCKET_NAME/$S3_OBJECT_PATH/$ARTIFACT_NAME',
