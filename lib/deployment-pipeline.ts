@@ -201,7 +201,7 @@ export class DeploymentPipeline extends Stack {
                         ],
                     },
                 }
-            }), 
+            }),
             environmentVariables: {
                 ARTIFACT_NAME: {value: zipArchiveName},
                 S3_OBJECT_PATH: {value: pathPrefix},
