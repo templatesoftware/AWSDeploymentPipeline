@@ -200,15 +200,13 @@ export class DeploymentPipeline extends Stack {
                             'aws s3 cp $ARTIFACT_NAME s3://$BUCKET_NAME/$S3_OBJECT_PATH/$ARTIFACT_NAME',
                         ],
                     },
-                },
-                environment: {
-                    environmentVariables: {
-                        "ARTIFACT_NAME": zipArchiveName,
-                        "S3_OBJECT_PATH": pathPrefix,
-                        "BUCKET_NAME": bucket.bucketName,
-                    },
-                },
-            })
+                }
+            }), 
+            environmentVariables: {
+                ARTIFACT_NAME: {value: zipArchiveName},
+                S3_OBJECT_PATH: {value: pathPrefix},
+                BUCKET_NAME: {value: bucket.bucketName},
+            }
         });
     }
 
