@@ -9,7 +9,7 @@ import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
-import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 
 export interface DeploymentPipelineProps extends StackProps {
@@ -201,20 +201,11 @@ export class DeploymentPipeline extends Stack {
                     },
                 },
                 environment: {
-                    environmentVariables: [
-                        {
-                            "name": "ARTIFACT_NAME",
-                            value: zipArchiveName
-                        },
-                        {
-                            "name": "S3_OBJECT_PATH",
-                            value: pathPrefix
-                        },
-                        {
-                            "name": "BUCKET_NAME",
-                            value: bucket.bucketName
-                        },
-                    ],
+                    environmentVariables: {
+                        ARTIFACT_NAME: zipArchiveName,
+                        S3_OBJECT_PATH: pathPrefix,
+                        BUCKET_NAME: bucket.bucketName,
+                    },
                 },
             })
         });
