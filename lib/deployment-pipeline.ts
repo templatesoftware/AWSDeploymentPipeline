@@ -124,8 +124,8 @@ export class DeploymentPipeline extends Stack {
         const codeReplicationBucket = new Bucket(this, `${props.pipelineName}-code-replication-bucket`)
         // get a uuid for the artifact upload to avoid collisions
         const uuid: string = uuidv4().substring(0, 6);
-        const date = new Date()
-        const pathPrefix = `${date.toDateString()}-${uuid}/`
+        const date = getFormattedDateForFilePath()
+        const pathPrefix = `${date}-${uuid}/`
         const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
                 return new CodeBuildAction(
@@ -185,6 +185,13 @@ export class DeploymentPipeline extends Stack {
         const zipArchiveName = `${autoBuildRepository.repo}.zip`
         return new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
             buildSpec: BuildSpec.fromObject({
+                env: {
+                    variables: {
+                        ARTIFACT_NAME: {value: zipArchiveName},
+                        S3_OBJECT_PATH: {value: pathPrefix},
+                        BUCKET_NAME: {value: bucket.bucketName},
+                    },
+                },
                 version: '0.2',
                 phases: {
                     install: {
@@ -201,12 +208,7 @@ export class DeploymentPipeline extends Stack {
                         ],
                     },
                 }
-            }),
-            environmentVariables: {
-                ARTIFACT_NAME: {value: zipArchiveName},
-                S3_OBJECT_PATH: {value: pathPrefix},
-                BUCKET_NAME: {value: bucket.bucketName},
-            }
+            })
         });
     }
 
