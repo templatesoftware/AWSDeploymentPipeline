@@ -1,6 +1,6 @@
 {
   "name": "aws-deployment-pipeline",
-  "version": "1.15.1",
+  "version": "1.16.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
