@@ -1,5 +1,6 @@
 import {Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
+import {PipelineDeploymentArtifacts} from "./pipeline-deployment-artifacts";
 
 export interface PipelineStage {
     readonly stage: Stage;
@@ -32,8 +33,12 @@ export const PROD_STAGE: PipelineStage = {
 }
 
 export interface DeploymentStackProps extends StackProps {
+    /** Stage of the pipeline */
     stage: Stage
+    /** Prod, yes or no */
     isProd: boolean;
+    /** Deployment artifacts needed to create this stack such as files in S3 or an ECR image */
+    pipelineDeploymentArtifacts?: PipelineDeploymentArtifacts;
 }
 
 /**

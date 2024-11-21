@@ -12,6 +12,7 @@ import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
 import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
+import {PipelineDeploymentArtifacts} from "./pipeline-deployment-artifacts";
 
 export interface DeploymentPipelineProps extends StackProps {
     /** pipeline name */
@@ -29,8 +30,7 @@ export class DeploymentPipeline extends Stack {
     readonly cloudAssemblyOutput: Artifact;
     readonly cdkSourceRepository: AutoBuildRepository;
     readonly repositoryToBuildArtifact: Map<AutoBuildRepository, Artifact>;
-    readonly artifactOutputBucket: Bucket;
-    readonly artifactOutputPath: string;
+    readonly pipelineDeploymentArtifacts: PipelineDeploymentArtifacts;
 
     constructor(scope: Construct, id: string, props: DeploymentPipelineProps) {
         super(scope, id, props);
@@ -130,7 +130,7 @@ export class DeploymentPipeline extends Stack {
         const uuid: string = uuidv4().substring(0, 6);
         const now = new Date();
         const date = getFormattedDateForFilePath(now)
-        const pathPrefix = `${date}-${uuid}/`
+        const path = `${date}-${uuid}/`
         const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
                 return new CodeBuildAction(
@@ -138,7 +138,7 @@ export class DeploymentPipeline extends Stack {
                         actionName: `${autoBuildRepository.repo}-Replication`,
                         project: this.getCodeBuildReplicationProject(
                             autoBuildRepository,
-                            pathPrefix,
+                            path,
                             codeReplicationBucket
                         ),
                         input: this.getBuildArtifact(autoBuildRepository)
@@ -146,16 +146,32 @@ export class DeploymentPipeline extends Stack {
                 )
             }
         )
+        pipelineMutationAction.addToRolePolicy(
+            new PolicyStatement({
+                actions: ['sts:AssumeRole', 'ssm:GetParameter*'],
+                resources: ['*'],
+            })
+        );
 
         // for each source repository, zip it up and upload it to S3 or EMR for later distribution
         this.pipeline.addStage({
             stageName: 'Code-Replication',
             actions: replicationActions
         })
+
+        /**
+         * how do we replicate deployment artifacts for each and every stage? and target within a stage?
+         */
+        this.pipelineDeploymentArtifacts = new PipelineDeploymentArtifacts(
+            {
+                artifactOutputBucket: codeReplicationBucket,
+                artifactOutputPath: path
+            }
+        )
     }
 
     /**
-     * Add a deployment stage to the pipeline, add artifact replication
+     * Add a deployment stage to the pipeline
      * @param piplineStage
      * @param deploymentStage
      */
@@ -166,7 +182,7 @@ export class DeploymentPipeline extends Stack {
                 actionName: `${stage.stackName}`,
                 stackName: stage.stackName,
                 templatePath: this.cloudAssemblyOutput.atPath(`cdk.out/${stage.stackName}.template.json`),
-                adminPermissions: true
+                adminPermissions: true,
             })
         );
         // create a stage with the given deployment actions
@@ -179,21 +195,21 @@ export class DeploymentPipeline extends Stack {
     /**
      * Creates a build project that builds a pipeline's input repository and uploads it into S3 for later distribution
      * @param autoBuildRepository source repository to replicate
-     * @param pathPrefix prefix to use within s3Bucket
+     * @param path prefix to use within s3Bucket
      * @param bucket bucket to upload replicated code to
      * @private build project to zip and upload a source repository
      */
     private getCodeBuildReplicationProject(
         autoBuildRepository: AutoBuildRepository,
-        pathPrefix: string,
+        path: string,
         bucket: Bucket): PipelineProject {
         const zipArchiveName = `${autoBuildRepository.repo}.zip`
-        return new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
+        const project = new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
             buildSpec: BuildSpec.fromObject({
                 env: {
                     variables: {
                         ARTIFACT_NAME: zipArchiveName,
-                        S3_OBJECT_PATH: pathPrefix,
+                        S3_OBJECT_PATH: path,
                         BUCKET_NAME: bucket.bucketName,
                     },
                 },
@@ -216,6 +232,13 @@ export class DeploymentPipeline extends Stack {
                 }
             })
         });
+        project.addToRolePolicy(
+            new PolicyStatement({
+                actions: ['s3:PutObject'],
+                resources: [bucket.bucketArn],
+            })
+        );
+        return project
     }
 
     /**
@@ -226,6 +249,9 @@ export class DeploymentPipeline extends Stack {
         return this.repositoryToBuildArtifact.get(autoBuildRepository)!;
     }
 
+    private getLatestDeploymentArtifacts(): PipelineDeploymentArtifacts {
+        return this.pipelineDeploymentArtifacts;
+    }
 
     /**
      * Get all repos to auto build, including the cdk source repo
