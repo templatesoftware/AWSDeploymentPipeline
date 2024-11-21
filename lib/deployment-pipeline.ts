@@ -74,6 +74,7 @@ export class DeploymentPipeline extends Stack {
                 },
             }),
         });
+        // deploy latest CDK changes
         const pipelineMutationAction = new PipelineProject(this, `${props.pipelineName}-pipeline-mutation`, {
             projectName: `${props.pipelineName}-pipeline-mutation`,
             environment: {
@@ -91,7 +92,7 @@ export class DeploymentPipeline extends Stack {
                 },
             }),
         });
-        // allow the pipeline to self mutate self mutation
+        // allow the pipeline to self mutate
         pipelineMutationAction.addToRolePolicy(
             new PolicyStatement({
                 actions: ['sts:AssumeRole', 'ssm:GetParameter*'],
