@@ -11,11 +11,11 @@ export interface PipelineDeploymentArtifactsProps {
  */
 export class PipelineDeploymentArtifacts {
 
-    readonly artifactOutputBucket: string;
+    readonly artifactOutputBucket: Bucket;
     readonly artifactOutputPath: string;
 
     public constructor(props: PipelineDeploymentArtifactsProps) {
-        this.artifactOutputBucket = props.artifactOutputPath;
+        this.artifactOutputBucket = props.artifactOutputBucket;
         this.artifactOutputPath = props.artifactOutputPath
     }
 
