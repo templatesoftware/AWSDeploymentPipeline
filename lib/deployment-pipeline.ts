@@ -29,6 +29,8 @@ export class DeploymentPipeline extends Stack {
     readonly cloudAssemblyOutput: Artifact;
     readonly cdkSourceRepository: AutoBuildRepository;
     readonly repositoryToBuildArtifact: Map<AutoBuildRepository, Artifact>;
+    readonly artifactOutputBucket: Bucket;
+    readonly artifactOutputPath: string;
 
     constructor(scope: Construct, id: string, props: DeploymentPipelineProps) {
         super(scope, id, props);
@@ -153,7 +155,7 @@ export class DeploymentPipeline extends Stack {
     }
 
     /**
-     * Add a deployment stage to the pipeline
+     * Add a deployment stage to the pipeline, add artifact replication
      * @param piplineStage
      * @param deploymentStage
      */
@@ -190,9 +192,9 @@ export class DeploymentPipeline extends Stack {
             buildSpec: BuildSpec.fromObject({
                 env: {
                     variables: {
-                        ARTIFACT_NAME: {value: zipArchiveName},
-                        S3_OBJECT_PATH: {value: pathPrefix},
-                        BUCKET_NAME: {value: bucket.bucketName},
+                        ARTIFACT_NAME: zipArchiveName,
+                        S3_OBJECT_PATH: pathPrefix,
+                        BUCKET_NAME: bucket.bucketName,
                     },
                 },
                 version: '0.2',
