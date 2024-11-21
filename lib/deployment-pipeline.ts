@@ -7,9 +7,10 @@ import {DeploymentStage} from "./deployment-stage";
 import {IAction} from "aws-cdk-lib/aws-codepipeline/lib/action";
 import {AutoBuildRepository} from "./auto-build-repository";
 import {toTitleCase} from "./utils/title-case";
+import {getFormattedDateForFilePath} from "./utils/date-time";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
-import {BuildEnvironmentVariable, BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 
 export interface DeploymentPipelineProps extends StackProps {
@@ -124,7 +125,8 @@ export class DeploymentPipeline extends Stack {
         const codeReplicationBucket = new Bucket(this, `${props.pipelineName}-code-replication-bucket`)
         // get a uuid for the artifact upload to avoid collisions
         const uuid: string = uuidv4().substring(0, 6);
-        const date = getFormattedDateForFilePath()
+        const now = new Date();
+        const date = getFormattedDateForFilePath(now)
         const pathPrefix = `${date}-${uuid}/`
         const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
