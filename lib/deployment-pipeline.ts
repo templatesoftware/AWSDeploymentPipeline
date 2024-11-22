@@ -229,10 +229,16 @@ export class DeploymentPipeline extends Stack {
                 }
             })
         });
+        bucket.grantReadWrite(
+            project.role!
+        )
         project.addToRolePolicy(
             new PolicyStatement({
                 actions: ['s3:PutObject'],
-                resources: [bucket.bucketArn],
+                resources: [
+                    bucket.bucketArn,
+                    `${bucket.bucketArn}/*`
+                ],
             })
         );
         return project
