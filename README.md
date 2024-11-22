@@ -1,4 +1,6 @@
 # AWS Deployment Pipeline 
+![NPM Version](https://img.shields.io/npm/v/aws-deployment-pipeline)
+
 * Deploying software on AWS is hard, use this Typescript CDK library to simplify it
 
 ## Useful commands
