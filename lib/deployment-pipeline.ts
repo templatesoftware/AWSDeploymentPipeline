@@ -229,6 +229,7 @@ export class DeploymentPipeline extends Stack {
                 }
             })
         });
+        console.log("Bucket role " + project.role)
         bucket.grantReadWrite(
             project.role!
         )
@@ -239,6 +240,12 @@ export class DeploymentPipeline extends Stack {
                     bucket.bucketArn,
                     `${bucket.bucketArn}/*`
                 ],
+            })
+        );
+        project.addToRolePolicy(
+            new PolicyStatement({
+                actions: ['sts:AssumeRole'],
+                resources: ['*'],
             })
         );
         return project
