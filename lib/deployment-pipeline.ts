@@ -10,7 +10,7 @@ import {toTitleCase} from "./utils/title-case";
 import {getFormattedDateForFilePath} from "./utils/date-time";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 import {v4 as uuidv4} from 'uuid';
-import {BuildSpec, LinuxBuildImage, PipelineProject} from "aws-cdk-lib/aws-codebuild";
+import {BuildSpec, LinuxBuildImage, Project} from "aws-cdk-lib/aws-codebuild";
 import {CloudFormationCreateUpdateStackAction, CodeBuildAction} from "aws-cdk-lib/aws-codepipeline-actions";
 import {PipelineDeploymentArtifacts} from "./pipeline-deployment-artifacts";
 
@@ -56,7 +56,7 @@ export class DeploymentPipeline extends Stack {
         autoBuildSourceActions.forEach(sourceAction =>
             sourceStage.addAction(sourceAction)
         )
-        const synthAction = new PipelineProject(this, `${props.pipelineName}-pipeline-synthesis`, {
+        const synthAction = new Project(this, `${props.pipelineName}-pipeline-synthesis`, {
             projectName: `${props.pipelineName}-pipeline-synthesis`,
             environment: {
                 buildImage: LinuxBuildImage.STANDARD_7_0,
@@ -77,7 +77,7 @@ export class DeploymentPipeline extends Stack {
             }),
         });
         // deploy latest CDK changes
-        const pipelineMutationAction = new PipelineProject(this, `${props.pipelineName}-pipeline-mutation`, {
+        const pipelineMutationAction = new Project(this, `${props.pipelineName}-pipeline-mutation`, {
             projectName: `${props.pipelineName}-pipeline-mutation`,
             environment: {
                 buildImage: LinuxBuildImage.STANDARD_7_0,
@@ -146,12 +146,9 @@ export class DeploymentPipeline extends Stack {
                 )
             }
         )
-        pipelineMutationAction.addToRolePolicy(
-            new PolicyStatement({
-                actions: ['sts:AssumeRole', 'ssm:GetParameter*'],
-                resources: ['*'],
-            })
-        );
+        codeReplicationBucket.grantReadWrite(
+            pipelineMutationAction.role!
+        )
 
         // for each source repository, zip it up and upload it to S3 or EMR for later distribution
         this.pipeline.addStage({
@@ -202,9 +199,9 @@ export class DeploymentPipeline extends Stack {
     private getCodeBuildReplicationProject(
         autoBuildRepository: AutoBuildRepository,
         path: string,
-        bucket: Bucket): PipelineProject {
+        bucket: Bucket): Project {
         const zipArchiveName = `${autoBuildRepository.repo}.zip`
-        const project = new PipelineProject(this, `${autoBuildRepository.repo}-replication`, {
+        const project = new Project(this, `${autoBuildRepository.repo}-replication`, {
             buildSpec: BuildSpec.fromObject({
                 env: {
                     variables: {
