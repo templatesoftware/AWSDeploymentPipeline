@@ -130,7 +130,7 @@ export class DeploymentPipeline extends Stack {
         const uuid: string = uuidv4().substring(0, 6);
         const now = new Date();
         const date = getFormattedDateForFilePath(now)
-        const path = `${date}-${uuid}/`
+        const path = `${date}-${uuid}`
         const replicationActions: CodeBuildAction[] = this.getAllRepositoriesToBuild(props).map(
             autoBuildRepository => {
                 return new CodeBuildAction(
@@ -229,10 +229,6 @@ export class DeploymentPipeline extends Stack {
                 }
             })
         });
-        console.log("Bucket role " + project.role)
-        bucket.grantReadWrite(
-            project.role!
-        )
         project.addToRolePolicy(
             new PolicyStatement({
                 actions: ['s3:PutObject'],

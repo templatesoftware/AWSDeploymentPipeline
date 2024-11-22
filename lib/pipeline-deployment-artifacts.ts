@@ -13,19 +13,23 @@ export interface PipelineDeploymentArtifactsProps {
  */
 export class PipelineDeploymentArtifacts {
 
-    private readonly artifactOutputBucket: Bucket;
-    private readonly artifactOutputPath: string;
+    private readonly _artifactOutputBucket: Bucket;
+    private readonly _artifactOutputPath: string;
 
     public constructor(props: PipelineDeploymentArtifactsProps) {
-        this.artifactOutputBucket = props.artifactOutputBucket;
-        this.artifactOutputPath = props.artifactOutputPath
+        this._artifactOutputBucket = props.artifactOutputBucket;
+        this._artifactOutputPath = props.artifactOutputPath
+    }
+
+    public get artifactOutputBucket() {
+        return this._artifactOutputBucket
     }
 
     /**
      * Get the latest s3 path for the output artifacts - leading slash removed
      */
     public getArtifactS3Path(): string {
-        return this.artifactOutputPath.replace(/^\/+/, '')
+        return this._artifactOutputPath.replace(/^\/+/, '')
     }
 
     /**
